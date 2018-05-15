@@ -37,15 +37,28 @@ if __name__ == "__main__":
           'size'   : 20,  
           }  
   
-  
+##below is for norm colorbar
+  class MidpointNormalize(colors.Normalize):
+    def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
+        self.midpoint = midpoint
+        colors.Normalize.__init__(self, vmin, vmax, clip)
+
+    def __call__(self, value, clip=None):
+        # I'm ignoring masked values and all kinds of edge cases to make a
+        # simple example...
+        x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
+        return np.ma.masked_array(np.interp(value, x, y)) 
+##end for norm colorbar####
+
+ 
   
   ######### Parameter you should set ###########
   start   =  1  # start time
-  stop    =  19  # end time
+  stop    =  36  # end time
   step    =  1  # the interval or step
   
 #  youwant = ['electron_x_px','electron_density','electron_en','electron_theta_en','ey'] #,'electron_ekbar']
-  youwant =  ['jx','jy','ey','ex','ey_averaged','bz','bz_averaged','Subset_high_e_density','Subset_high_e_ekbar']
+  youwant =  ['electron_en','electron_no_en']#,'ey','ex','ey_averaged','bz','bz_averaged','Subset_high_e_density','Subset_high_e_ekbar']
   #youwant field  ex,ey,ez,bx,by,bz,ex_averaged,bx_averaged...
   #youwant Derived electron_density,electron_ekbar...
   #youwant dist_fn electron_x_px, electron_py_pz, electron_theta_en...
@@ -54,7 +67,7 @@ if __name__ == "__main__":
   ######### Script code drawing figure ################
   for n in range(start,stop+step,step):
     #### header data ####
-    data = sdf.read("./Data/"+str(n).zfill(4)+".sdf",dict=True)
+    data = sdf.read("./Data_dispersion/"+str(n).zfill(4)+".sdf",dict=True)
     header=data['Header']
     time=header['time']
     x  = data['Grid/Grid_mid'].data[0]/1.0e-6
@@ -69,9 +82,9 @@ if __name__ == "__main__":
                     continue
                 eee=np.max([-np.min(ex.T),np.max(ex.T)])
                 levels = np.linspace(-eee, eee, 40)
-                plt.contourf(X, Y, ex.T, levels=levels, cmap=cm.PiYG)
+                plt.contourf(X, Y, ex.T, norm=MidpointNormalize(midpoint=0.), cmap=cm.PiYG)
                 #### manifesting colorbar, changing label and axis properties ####
-                cbar=plt.colorbar(ticks=[-eee, -eee/2, 0, eee/2, eee])
+                cbar=plt.colorbar()
                 cbar.set_label('Normalized current',fontdict=font)
                 plt.xlabel('X [$\mu m$]',fontdict=font)
                 plt.ylabel('Y [$\mu m$]',fontdict=font)
@@ -82,7 +95,7 @@ if __name__ == "__main__":
                 #plt1.set_ylabel('Normalized '+name)
                 fig = plt.gcf()
                 fig.set_size_inches(12, 7)
-                fig.savefig('./jpg/'+name+str(n).zfill(4)+'.png',format='png',dpi=100)
+                fig.savefig(to_path+name+str(n).zfill(4)+'.png',format='png',dpi=100)
                 plt.close("all")
                 
         if (name[0:2] == 'ex') or (name[0:2] == 'ey') or (name[0:2] == 'ez'):
@@ -104,7 +117,7 @@ if __name__ == "__main__":
                 #plt1.set_ylabel('Normalized '+name)
                 fig = plt.gcf()
                 fig.set_size_inches(12, 7)
-                fig.savefig('./jpg/'+name+str(n).zfill(4)+'.png',format='png',dpi=100)
+                fig.savefig(to_path+name+str(n).zfill(4)+'.png',format='png',dpi=100)
                 plt.close("all")
         elif (name[0:2] == 'bx') or (name[0:2] == 'by') or (name[0:2] == 'bz'):
                 ex = data['Magnetic Field/'+str.capitalize(name)].data/bxunit
@@ -125,7 +138,7 @@ if __name__ == "__main__":
                 #plt1.set_ylabel('Normalized '+name)
                 fig = plt.gcf()
                 fig.set_size_inches(12, 7)
-                fig.savefig('./jpg/'+name+str(n).zfill(4)+'.png',format='png',dpi=100)
+                fig.savefig(to_path+name+str(n).zfill(4)+'.png',format='png',dpi=100)
                 plt.close("all")
         elif (name[-7:] == 'density'):
                 den = data['Derived/Number_Density/'+name[0:-8]].data/denunit
@@ -142,7 +155,7 @@ if __name__ == "__main__":
                 plt.title(name+' at '+str(round(time/1.0e-15,6))+' fs',fontdict=font)
                 fig = plt.gcf()
                 fig.set_size_inches(12, 7)
-                fig.savefig('./jpg/'+name+str(n).zfill(4)+'.png',format='png',dpi=100)
+                fig.savefig(to_path+name+str(n).zfill(4)+'.png',format='png',dpi=100)
                 plt.close("all")
         elif (name[-5:] == 'ekbar'):
                 den = data['Derived/EkBar/'+name[0:-6]].data/(q0*1.0e6)
@@ -159,7 +172,7 @@ if __name__ == "__main__":
                 plt.title(name+' at '+str(round(time/1.0e-15,6))+' fs',fontdict=font)
                 fig = plt.gcf()
                 fig.set_size_inches(12, 7)
-                fig.savefig('./jpg/'+name+str(n).zfill(4)+'.png',format='png',dpi=100)
+                fig.savefig(to_path+name+str(n).zfill(4)+'.png',format='png',dpi=100)
                 plt.close("all")
         elif (name[-4:] == 'x_px'):
                 den = data['dist_fn/x_px/'+name[0:-5]].data[:,:,0]
@@ -180,7 +193,7 @@ if __name__ == "__main__":
                 plt.title(name+' at '+str(round(time/1.0e-15,6))+' fs',fontdict=font)
                 fig = plt.gcf()
                 fig.set_size_inches(12, 7)
-                fig.savefig('./jpg/'+name+str(n).zfill(4)+'.png',format='png',dpi=100)
+                fig.savefig(to_path+name+str(n).zfill(4)+'.png',format='png',dpi=100)
                 plt.close("all")
         elif (name[-4:] == 'y_py'):
                 den = data['dist_fn/y_py/'+name[0:-5]].data[:,:,0]
@@ -201,7 +214,7 @@ if __name__ == "__main__":
                 plt.title(name+' at '+str(round(time/1.0e-15,6))+' fs',fontdict=font)
                 fig = plt.gcf()
                 fig.set_size_inches(12, 7)
-                fig.savefig('./jpg/'+name+str(n).zfill(4)+'.png',format='png',dpi=100)
+                fig.savefig(to_path+name+str(n).zfill(4)+'.png',format='png',dpi=100)
                 plt.close("all")
         elif (name[-5:] == 'py_pz'):
                 den = data['dist_fn/py_pz/'+name[0:-6]].data[:,:,0]
@@ -222,7 +235,7 @@ if __name__ == "__main__":
                 plt.title(name+' at '+str(round(time/1.0e-15,6))+' fs',fontdict=font)
                 fig = plt.gcf()
                 fig.set_size_inches(12, 7)
-                fig.savefig('./jpg/'+name+str(n).zfill(4)+'.png',format='png',dpi=100)
+                fig.savefig(to_path+name+str(n).zfill(4)+'.png',format='png',dpi=100)
                 plt.close("all")
         elif (name[-8:] == 'theta_en'):
                 denden = data['dist_fn/theta_en/'+name[0:-9]].data[:,:,0]
@@ -246,7 +259,7 @@ if __name__ == "__main__":
                 #plt1.set_ylabel('Normalized '+name)  
                 fig = plt.gcf()
                 fig.set_size_inches(12, 7)
-                fig.savefig('./jpg/'+name+str(n).zfill(4)+'.png',format='png',dpi=100)
+                fig.savefig(to_path+name+str(n).zfill(4)+'.png',format='png',dpi=100)
                 plt.close("all")
         elif (name[-2:] == 'en'):
                 den = data['dist_fn/en/'+name[0:-3]].data[:,0,0]
@@ -260,7 +273,7 @@ if __name__ == "__main__":
                 plt.title(name+' at '+str(round(time/1.0e-15,6))+' fs',fontdict=font)
                 fig = plt.gcf()
                 fig.set_size_inches(12, 7)
-                fig.savefig('./jpg/'+name+str(n).zfill(4)+'.png',format='png',dpi=100)
+                fig.savefig(to_path+name+str(n).zfill(4)+'.png',format='png',dpi=100)
                 plt.close("all")
     print('finised '+str(round(100.0*(n-start+step)/(stop-start+step),4))+'%')
   
